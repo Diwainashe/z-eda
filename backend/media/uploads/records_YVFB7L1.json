@@ -1,0 +1,22 @@
+[
+    {"registration_number": 1001, "sex": "Male", "age": 45.0, "date_of_incidence": "2020-01-15", "tumor_site": "Lung", "morphology": "C34.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1002, "sex": "Female", "age": 34.0, "date_of_incidence": "2019-05-20", "tumor_site": "Breast", "morphology": "C50.9", "behavior": 3, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1003, "sex": "Male", "age": 130.0, "date_of_incidence": "2021-09-10", "tumor_site": "Prostate", "morphology": "C61.9", "behavior": 2, "basis_of_diagnosis": "Imaging"},
+    {"registration_number": 1004, "sex": null, "age": -1.0, "date_of_incidence": "2022-07-01", "tumor_site": "Ovary", "morphology": "C56.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1005, "sex": "Male", "age": null, "date_of_incidence": "2018-11-05", "tumor_site": "Colon", "morphology": null, "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1001, "sex": "Female", "age": 50.0, "date_of_incidence": "2020-01-15", "tumor_site": "Lung", "morphology": "C34.9", "behavior": 3, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1006, "sex": "Female", "age": 60.0, "date_of_incidence": "2021-03-14", "tumor_site": "Lung", "morphology": "C50.9", "behavior": 2, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1007, "sex": "Male", "age": 25.0, "date_of_incidence": "2020-09-20", "tumor_site": "Prostate", "morphology": "C61.9", "behavior": 2, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1008, "sex": null, "age": 90.0, "date_of_incidence": "2019-02-10", "tumor_site": "Breast", "morphology": "C50.9", "behavior": 3, "basis_of_diagnosis": "Imaging"},
+    {"registration_number": 1009, "sex": "Female", "age": null, "date_of_incidence": "2018-08-12", "tumor_site": "Colon", "morphology": "C18.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1010, "sex": "Male", "age": 15.0, "date_of_incidence": "2021-11-23", "tumor_site": "Brain", "morphology": "C71.9", "behavior": 3, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1011, "sex": "Female", "age": 65.0, "date_of_incidence": "2020-05-15", "tumor_site": "Cervix", "morphology": "C53.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1012, "sex": "Male", "age": 85.0, "date_of_incidence": "2019-09-05", "tumor_site": "Prostate", "morphology": "C61.9", "behavior": 2, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1013, "sex": "Female", "age": 40.0, "date_of_incidence": "2022-02-17", "tumor_site": "Lung", "morphology": "C34.9", "behavior": 3, "basis_of_diagnosis": "Imaging"},
+    {"registration_number": 1014, "sex": "Male", "age": 105.0, "date_of_incidence": "2017-07-30", "tumor_site": "Skin", "morphology": "C44.9", "behavior": 2, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1015, "sex": null, "age": 70.0, "date_of_incidence": "2021-01-10", "tumor_site": "Ovary", "morphology": "C56.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1016, "sex": "Female", "age": 55.0, "date_of_incidence": "2018-03-11", "tumor_site": "Pancreas", "morphology": "C25.9", "behavior": 2, "basis_of_diagnosis": "Imaging"},
+    {"registration_number": 1017, "sex": "Male", "age": -5.0, "date_of_incidence": "2017-11-01", "tumor_site": "Colon", "morphology": "C18.9", "behavior": 3, "basis_of_diagnosis": "Histology"},
+    {"registration_number": 1018, "sex": "Male", "age": 200.0, "date_of_incidence": "2016-12-25", "tumor_site": "Breast", "morphology": "C50.9", "behavior": 3, "basis_of_diagnosis": "Clinical"},
+    {"registration_number": 1019, "sex": "Female", "age": 78.0, "date_of_incidence": "2020-10-09", "tumor_site": "Prostate", "morphology": "C61.9", "behavior": 2, "basis_of_diagnosis": "Histology"}
+]

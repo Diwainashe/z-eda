@@ -1,0 +1,57 @@
+services:
+  redis:
+    image: redis:6
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  django:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: django-app
+    command: daphne -b 0.0.0.0 -p 8000 zeda.asgi:application
+    volumes:
+      - ./backend:/code
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: celery-worker
+    command: celery -A zeda worker --loglevel=info --pool=solo
+    volumes:
+      - ./backend:/code
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+      - django
+    user: "appuser:appgroup"
+
+  react:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react-app
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - django
+
+volumes:
+  redis-data:
