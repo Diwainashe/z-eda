@@ -54,7 +54,12 @@ def preprocess_and_load_json(file_path):
             content = json.load(f)
         if 'morphology' in file_path:
             return {value: key for key, value in content.items()}
+        
+        # Log a preview of the first four items if available
+        preview = list(content.items())[:4]  # Get up to the first 4 items
+        logging.info(f"Preview of codes (up to 4): {preview}")
         return content
+    
     except Exception as e:
         logging.error(f"Error loading JSON file '{file_path}': {str(e)}", exc_info=True)
         return {}
@@ -232,6 +237,7 @@ def run_validations(dataset):
     try:
         logging.info("Starting individual item validations.")
         results = []
+        
         sex_codes = preprocess_and_load_json('api/data_files/sex.json') or {}
         behavior_codes = preprocess_and_load_json('api/data_files/behavior_codes.json') or {}
         grade_codes = preprocess_and_load_json('api/data_files/grade_codes.json') or {}
@@ -241,39 +247,51 @@ def run_validations(dataset):
         total_records = len(dataset)
         for index, record in enumerate(dataset, start=1):
             logging.info(f"Validating record {index}/{total_records}")
-            errors = {
-                "row": index,
-                "item_errors": [],
-                "combination_errors": []
-            }
+            record["is_valid"] = True
+            record["validation_results"] = []
+
+            def log_error(field, message):
+                record["is_valid"] = False
+                record["validation_results"].append(f"{field}: {message}")
 
             # Validate sex
             sex = record.get("sex")
-            if sex not in sex_codes.values():
-                errors["item_errors"].append(f"Invalid sex code: {sex}")
+            if sex not in sex_codes.values():               
+                log_error("sex", f"Invalid sex code: {sex}")
+            else:
+                record["validation_results"].append(f"Valid sex code: {sex}")
 
             # Validate behavior
             behavior = record.get("behavior")
             if behavior not in behavior_codes.values():
-                errors["item_errors"].append(f"Invalid behavior code: {behavior}")
+                log_error("behavior", f"Invalid behavior code: {behavior}")            
+            else:
+                record["validation_results"].append(f"Valid behavior code: {behavior}")
 
             # Validate grade
             grade = record.get("grade_code")
             if grade not in grade_codes.values():
-                errors["item_errors"].append(f"Invalid grade code: {grade}")
+                log_error("grade", f"Invalid sex code: {grade}")
+            else:
+                record["validation_results"].append(f"Valid sex code: {grade}")
 
             # Validate topography
             topography = record.get("topography")
             if topography not in topography_codes.keys():
-                errors["item_errors"].append(f"Invalid topography code: {topography}")
+                log_error("topography", f"Invalid sex code: {topography}")
+            else:
+                record["validation_results"].append(f"Valid sex code: {topography}")
 
             # Validate morphology
             histology = record.get("histology")
             if histology not in morphology_codes.keys():
-                errors["item_errors"].append(f"Invalid morphology code: {histology}")
+                log_error("histology", f"Invalid sex code: {histology}")
+            else:
+                record["validation_results"].append(f"Valid sex code: {histology}")
+                
+            # Add the record log
+            results.append(record)
 
-            if errors["item_errors"] or errors["combination_errors"]:
-                results.append(errors)
 
         logging.info("Completed individual item validations.")
         return results
@@ -417,10 +435,12 @@ def run_data_combination_edits(dataset):
         total_records = len(dataset)
         for index, record in enumerate(dataset, start=1):
             logging.info(f"Running data combination validations for record {index}/{total_records}")
-            errors = {
-                "row": index,
-                "combination_errors": []
-            }
+            record.setdefault("is_valid", True)
+            record.setdefault("validation_results", [])
+            
+            def log_combination_error(field, message):
+                record["is_valid"] = False
+                record["validation_results"].append(f"{field}: {message}")
 
             # Extract relevant fields
             age = record.get("age_at_incidence")
@@ -437,58 +457,63 @@ def run_data_combination_edits(dataset):
             for tumour_check in childhood_tumour_checks:
                 if histology in tumour_check["diagnostic_group"] and age is not None:
                     if not (tumour_check["age_range"][0] <= age <= tumour_check["age_range"][1]):
-                        errors["combination_errors"].append(
-                            f"Histology {histology} unlikely for age {age} (expected age range: {tumour_check['age_range']})"
-                        )
+                        log_combination_error("histology", f"Histology {histology} unlikely for age {age} (expected age range: {tumour_check['age_range']})")
+                    else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Unlikely Combinations for age > 15**
                 if age is not None and age > 15:
                     if age < 40 and site.startswith("C61") and histology.startswith("814"):
-                        errors["combination_errors"].append(
-                            "Age < 40 with site C61._ and histology 814_ is unlikely"
-                        )
+                        log_combination_error("combination", f"Age < 40 with site C61._ and histology 814_ is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Histology combination: {histology}")
+                        
                     if age < 20 and site in [
                         "C15", "C19", "C20", "C21", "C23", "C24", "C38.4", "C50", "C53", "C54", "C55"
                     ]:
-                        errors["combination_errors"].append(
-                            f"Age < 20 with site {site} is unlikely"
-                        )
+                        log_combination_error("combination", f"Age < 20 with site {site} is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Topography combination: {histology}")
+                        
                     if age < 20 and site.startswith("C17") and histology.isdigit() and int(histology) < 9590:
-                        errors["combination_errors"].append(
-                            f"Age < 20 with site {site} and histology {histology} is unlikely"
-                        )
+                        log_combination_error("combination", f"Age < 20 with site {site} and histology {histology} is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Histology combination: {histology}")
+                        
                     if age < 20 and site in ["C33", "C34", "C18"] and (not histology.startswith("824") if histology else True):
-                        errors["combination_errors"].append(
-                            f"Age < 20 with site {site} and histology {histology} is unlikely"
-                        )
+                        log_combination_error("combination", f"Age < 20 with site {site} and histology {histology} is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Site/Histology combination: {site}, {histology}")
+                        
                     if age > 45 and site.startswith("C58") and histology == "9100":
-                        errors["combination_errors"].append(
-                            "Age > 45 with site C58._ and histology 9100 is unlikely"
-                        )
+                        log_combination_error("combination", f"Age > 45 with site C58._ and histology 9100 is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Site/Histology combination: {site}, {histology}")
+                        
                     if age <= 25 and histology in ["9732", "9823"]:
-                        errors["combination_errors"].append(
-                            f"Age <= 25 with histology {histology} is unlikely"
-                        )
+                        log_combination_error("combination", f"Age <= 25 with histology {histology} is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Histology combination:{histology}")
+                        
                     if histology in ["8910", "8960", "8970", "8981", "8991", "9072", "9470",
                                     "9510", "9511", "9512", "9513", "9514", "9515",
                                     "9516", "9517", "9518", "9519"]:
-                        errors["combination_errors"].append(
-                            f"Age > 15 with histology {histology} is unlikely"
-                        )
+                        log_combination_error("combination", f"Age > 15 with histology {histology} is unlikely")
+                    else:
+                        record["validation_results"].append(f"Valid Age/Histology combination: {histology}")
             
             # **Age/Site Checks**
             for check in age_site_checks:
                 if site and site.startswith(check["site"]) and age is not None:
                     if "histology_prefix" in check and histology.startswith(check["histology_prefix"]):
                         if not (check["age_range"][0] <= age <= check["age_range"][1]):
-                            errors["combination_errors"].append(
-                                f"Site {site} and histology {histology} unlikely for age {age} (expected age range: {check['age_range']})"
-                            )
+                            log_combination_error("combination", f"Site {site} and histology {histology} unlikely for age {age} (expected age range: {check['age_range']})")
+                    
                     elif "histology_max" in check and histology.isdigit() and int(histology) <= check["histology_max"]:
                         if not (check["age_range"][0] <= age <= check["age_range"][1]):
-                            errors["combination_errors"].append(
-                                f"Site {site} and histology {histology} unlikely for age {age} (expected age range: {check['age_range']})"
-                            )
+                            log_combination_error("combination", f"Site {site} and histology {histology} unlikely for age {age} (expected age range: {check['age_range']})")
+                    else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Sex/Sex-Histology Checks**
             # Extract the first two digits of the histology code to determine the histological family
@@ -496,44 +521,44 @@ def run_data_combination_edits(dataset):
 
             for check in sex_histology_checks:
                 if sex and histological_family and sex in check["sex"] and histological_family in check["histological_families"]:
-                    errors["combination_errors"].append(
-                        f"Histological family {histological_family} is unlikely for sex {sex}."
-                    )
+                    log_combination_error("combination", f"Histological family {histological_family} is unlikely for sex {sex}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Sex/Site Checks**
             for check in sex_site_checks:
                 if sex == check["sex"] and site in check["sites"]:
-                    errors["combination_errors"].append(
-                        f"Site {site} not possible for sex {sex}."
-                    )
+                    log_combination_error("combination", f"Site: {site} not possible for sex: {sex}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Behavior/Site Checks**
             for check in behavior_site_checks:
                 if behavior == check["behavior"] and site in check["sites"]:
-                    errors["combination_errors"].append(
-                        f"Behavior {behavior} unlikely with site {site}."
-                    )
+                    log_combination_error("combination", f"Behavior: {behavior} unlikely with site: {site}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Behavior/Histology Checks**
             for check in behavior_histology_checks:
                 if behavior == check["behavior"] and histology in check["histologies"]:
-                    errors["combination_errors"].append(
-                        f"Behavior {behavior} unlikely with histology {histology}."
-                    )
+                    log_combination_error("combination", f"Behavior: {behavior} unlikely with histology: {histology}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Grade/Histology Checks**
             for check in grade_histology_checks:
                 if grade == check["grade"] and histology in check["histologies"]:
-                    errors["combination_errors"].append(
-                        f"Grade {grade} unlikely with histology {histology}."
-                    )
+                    log_combination_error("combination", f"Grade: {grade} unlikely with histology: {histology}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
 
             # **Basis of Diagnosis/Histology Checks**
             for check in basis_histology_checks:
                 if basis_of_diagnosis == check["basis_of_diagnosis"] and histology in check["histologies"]:
-                    errors["combination_errors"].append(
-                        f"Basis of diagnosis {basis_of_diagnosis} unlikely with histology {histology}."
-                    )
+                    log_combination_error("combination", f"Basis of diagnosis: {basis_of_diagnosis} unlikely with histology: {histology}.")
+                else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
                     
             # **Incidence/Birth Date Check**
             if birth_date and incidence_date:
@@ -543,14 +568,14 @@ def run_data_combination_edits(dataset):
                     
                     if pd.notna(birth_date_obj) and pd.notna(incidence_date_obj):
                         if incidence_date_obj <= birth_date_obj:
-                            errors["combination_errors"].append(
-                                "Date of incidence cannot be before or equal to the birth date."
-                            )
+                            log_combination_error("combination", f"Date of incidence cannot be before or equal to the birth date.")
+                    else:
+                        record["validation_results"].append(f"Valid diagnostic group: {histology}")
                 except Exception as e:
-                    errors["combination_errors"].append(f"Date parsing error: {e}")
+                    log_combination_error("combination", f"Date parsing error: {e}")
 
-            if errors["combination_errors"]:
-                results.append(errors)
+            
+                results.append(record)
 
         logging.info("Completed data combination validations.")
         return results
@@ -690,10 +715,12 @@ def run_site_morphology_edits(dataset):
         total_records = len(dataset)
         for index, record in enumerate(dataset, start=1):
             logging.info(f"Validating site-morphology for record {index}/{total_records}")
-            errors = {
-                "row": index,
-                "site_morphology_errors": []
-            }
+            record.setdefault("is_valid", True)
+            record.setdefault("validation_results", [])
+
+            def log_site_morphology_error(field, message):
+                record["is_valid"] = False
+                record["validation_results"].append(f"{field}: {message}")
 
             site = record.get("topography")
             histology = normalize_histology_code(record.get("histology"))
@@ -702,12 +729,12 @@ def run_site_morphology_edits(dataset):
             for check in site_morphology_checks:
                 if site in check["sites"]:
                     if histology not in check["morphologies"]:
-                        errors["site_morphology_errors"].append(
-                            f"Histology {histology} is not valid for site {site}"
-                        )
+                        log_site_morphology_error("site-morphology", f"Histology {histology} is not valid for site {site}")
+                    else:
+                        record["validation_results"].append(f"Valid diagnostic group: {site}, {histology}")
             
-            if errors["site_morphology_errors"]:
-                results.append(errors)
+            if record["validation_results"]:
+                results.append(record)
 
         logging.info("Completed site-morphology validations.")
         return results
@@ -723,37 +750,32 @@ def run_all_validations(dataset, validation_id):
     """
     try:
         logging.info("Starting all validations.")
-        combined_results = []
+        send_progress(validation_id, "Running validations...", msg_type='info')
         
         # Example: Total number of validation steps
         total_steps = 3
         current_step = 1
 
         # 1. Individual item edits
-        send_progress(validation_id, "Running individual item edits...", msg_type='info')
+        # **Step 1: Run Individual Item Validations**
+        send_progress(validation_id, "Running individual item validations...", msg_type='info')
         individual_item_results = run_validations(dataset)
-        if individual_item_results:
-            combined_results.extend(individual_item_results)
         send_progress(validation_id, f"Completed individual item edits ({current_step}/{total_steps}).", msg_type='success')
         current_step += 1
 
-        # 2. Data Combination Edits
-        send_progress(validation_id, "Running data combination edits...", msg_type='info')
-        data_combination_results = run_data_combination_edits(dataset)
-        if data_combination_results:
-            combined_results.extend(data_combination_results)
+        # **Step 2: Run Data Combination Validations**
+        send_progress(validation_id, "Running data combination validations...", msg_type='info')
+        data_combination_results = run_data_combination_edits(individual_item_results)
         send_progress(validation_id, f"Completed data combination edits ({current_step}/{total_steps}).", msg_type='success')
         current_step += 1
 
-        # 3. Site-Morphology Edits
-        send_progress(validation_id, "Running site-morphology edits...", msg_type='info')
-        site_morphology_results = run_site_morphology_edits(dataset)
-        if site_morphology_results:
-            combined_results.extend(site_morphology_results)
+        # **Step 3: Run Site-Morphology Validations**
+        send_progress(validation_id, "Running site-morphology validations...", msg_type='info')
+        final_results = run_site_morphology_edits(data_combination_results)
         send_progress(validation_id, f"Completed site-morphology edits ({current_step}/{total_steps}).", msg_type='success')
 
         logging.info("Completed all validations.")
-        return combined_results
+        return final_results
 
     except Exception as e:
         logging.error(f"Error in run_all_validations: {str(e)}", exc_info=True)
