@@ -234,6 +234,7 @@ def run_validations(dataset):
     """
     Runs validation checks for sex, behavior, grade, topography, and morphology.
     """
+    
     try:
         logging.info("Starting individual item validations.")
         results = []
