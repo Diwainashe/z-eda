@@ -11,13 +11,18 @@ import logging
 import json
 import os
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from django.contrib.auth import authenticate
 from django.conf import settings
-from .models import DataUpload
-from .utils import read_file, auto_correct_codes, run_all_validations  # Import only the needed functions
+from .models import DataUpload, MasterData
+from .utils import read_file, auto_correct_codes # Import only the needed functions
 from .tasks import run_all_validations_task 
 import uuid
+# views.py
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from django.db import IntegrityError, transaction
+from rest_framework.response import Response
 
 # Initialize logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -97,30 +102,28 @@ class AutoCorrectCodesView(APIView):
 
 class RunAllValidationsAPIView(APIView):
     """
-    API endpoint to initiate all validations.
+    API endpoint to initiate all validations and return results directly.
     """
 
     def post(self, request, format=None):
-        """
-        Initiates the validation process.
-        Expects 'dataset' in the request data.
-        """
         # Extract dataset from the request body
         dataset = request.data.get('dataset', [])
-
         if not dataset:
             return Response({"error": "No dataset provided."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Generate a unique ID for tracking
         validation_id = str(uuid.uuid4())
-        
-        # Trigger Celery task
-        run_all_validations_task.delay(validation_id, dataset)
-        
+
+        # Run validations synchronously and get results
+        result = run_all_validations_task(validation_id, dataset)  # Call the task function directly
+
+        # Format the response to include validation results and valid entries
         return Response({
             "validation_id": validation_id,
-            "results": []  # Initialize as empty array; will be updated via WebSocket or other means
-        }, status=202)
+            "validation_results": result['validation_results'],
+            "valid_entries": result['valid_entries']
+        }, status=status.HTTP_200_OK)
+
 
 @csrf_exempt
 def login_view(request):
@@ -167,3 +170,55 @@ class CheckAuthView(APIView):
 
     def get(self, request):
         return Response({'authenticated': True, 'username': request.user.username}, status=200)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([JSONParser])
+def consolidate_data(request):
+    user = request.user
+
+    # Extract data from request
+    upload_id = request.data.get('upload_id')
+    valid_entries = request.data.get('valid_entries')
+
+    if not upload_id or not valid_entries:
+        return Response({'error': 'Missing upload_id or valid_entries'}, status=400)
+
+    # Parse valid_entries if it's a JSON string
+    if isinstance(valid_entries, str):
+        try:
+            valid_entries = json.loads(valid_entries)
+        except json.JSONDecodeError:
+            return Response({'error': 'Invalid valid_entries format'}, status=400)
+
+    # Save each valid entry into MasterData
+    try:
+        master_data_instances = []
+
+        for entry in valid_entries:
+            master_data_instances.append(
+                MasterData(
+                    user=user,
+                    upload_id=uuid.UUID(upload_id),
+                    registration_number=entry.get('registration_number'),
+                    sex=entry.get('sex'),
+                    birth_date=entry.get('birth_date'),
+                    date_of_incidence=entry.get('date_of_incidence'),
+                    topography=entry.get('topography'),
+                    histology=entry.get('histology'),
+                    behavior=entry.get('behavior'),
+                    grade_code=entry.get('grade_code'),
+                    basis_of_diagnosis=entry.get('basis_of_diagnosis'),
+                )
+            )
+
+        with transaction.atomic():
+            MasterData.objects.bulk_create(master_data_instances, ignore_conflicts=True)
+
+    except IntegrityError as e:
+        return Response({'error': f'Integrity error: {str(e)}'}, status=400)
+    except Exception as e:
+        return Response({'error': f'Error saving data: {str(e)}'}, status=500)
+
+    return Response({"message": "Data consolidated and saved successfully."}, status=201)

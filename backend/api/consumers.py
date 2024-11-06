@@ -1,3 +1,5 @@
+# api/consumers.py
+
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -21,14 +23,20 @@ class ValidationConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-     # Handler for messages sent to the group with type 'validation_message'
+    # Handler for messages sent to the group with type 'validation_message'
     async def validation_message(self, event):
-        # Extract the message data
-        data = event['message']
+        try:
+            # Ensure event['message'] is parsed if it's a JSON string
+            data = event['message']
+            if isinstance(data, str):
+                data = json.loads(data)  # Parse JSON string to dictionary
 
-        # You can process the data as needed here
-        # For example, send it to the WebSocket client
-        await self.send(text_data=json.dumps({
-            'type': data['type'],      # This is the nested 'type'
-            'message': data['message'] # This is the actual message content
-        }))
+            # Send parsed data to the WebSocket client
+            await self.send(text_data=json.dumps({
+                'type': data.get('type'),
+                'message': data.get('message')
+            }))
+        except json.JSONDecodeError as e:
+            print(f"JSON decoding error: {e}")
+        except Exception as e:
+            print(f"Unexpected error in validation_message: {e}")

@@ -13,7 +13,7 @@ import os
 import django
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
-import zeda.routing  # Import your project's routing
+import api.routing  # Import your project's routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zeda.settings')
 django.setup()
@@ -21,6 +21,6 @@ django.setup()
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": URLRouter(
-        zeda.routing.websocket_urlpatterns
+        api.routing.websocket_urlpatterns
     ),
 })

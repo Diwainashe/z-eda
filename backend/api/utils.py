@@ -2,10 +2,8 @@ import os
 import json
 import logging
 import pandas as pd
-from difflib import get_close_matches
 from django.conf import settings
 from rapidfuzz import process
-import time
 from datetime import datetime
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -774,9 +772,12 @@ def run_all_validations(dataset, validation_id):
         send_progress(validation_id, "Running site-morphology validations...", msg_type='info')
         final_results = run_site_morphology_edits(data_combination_results)
         send_progress(validation_id, f"Completed site-morphology edits ({current_step}/{total_steps}).", msg_type='success')
+        
+        results = final_results
+        
 
         logging.info("Completed all validations.")
-        return final_results
+        return validation_id, results
 
     except Exception as e:
         logging.error(f"Error in run_all_validations: {str(e)}", exc_info=True)
@@ -799,9 +800,9 @@ def send_progress(validation_id, message, msg_type='info'):
         group_name,
         {
             'type': 'validation_message',
-            'message': {
+            'message': json.dumps({  # Ensure the message is JSON-formatted as needed
                 'type': msg_type,
                 'message': message
-            }
+            })
         }
     )

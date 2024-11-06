@@ -86,6 +86,9 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 CORS_ALLOW_ALL_HEADERS = True
 
+CORS_ALLOW_CREDENTIALS = True
+
+
 ROOT_URLCONF = 'zeda.urls'
 
 TEMPLATES = [
@@ -120,6 +123,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Africa/Johannesburg'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 CHANNEL_LAYERS = {
     'default': {
@@ -193,6 +197,11 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
     ],
 }
 

@@ -2,7 +2,7 @@
 import uuid
 import logging
 from celery import shared_task
-from .utils import run_all_validations, send_progress
+from .utils import run_validations, send_progress, run_data_combination_edits, run_site_morphology_edits
 # Import your actual auto-correction logic/module
 # from .auto_correction_module import perform_auto_correction
 import time  # For simulating long-running tasks
@@ -50,33 +50,31 @@ def auto_correct_codes(upload_id, dataset):
         send_progress(upload_id, f"Auto-correction failed: {str(e)}")
         raise
 
-@shared_task(bind=True, name='api.tasks.run_all_validations_task')
-def run_all_validations_task(self, validation_id, dataset):
+def run_all_validations_task(validation_id, dataset):
     """
-    Celery task to run all validations on the provided dataset.
+    Function to run all validations on the provided dataset.
     """
     try:
-        logging.info(f"Task {validation_id} started.")
-        
-        # Send start message
-        send_progress(validation_id, "Validation started.", msg_type='info')
+        logging.info(f"Validation task {validation_id} started.")
 
-        # Run all validations
-        results = run_all_validations(dataset, validation_id)
-        
-        # Send completion message
-        send_progress(validation_id, "All validations completed successfully.", msg_type='success')
-        
-        logging.info(f"Task {validation_id} completed successfully.")
-        
-        return {"validation_id": validation_id, "results": results}
-    
+        # Run all validations, filtering out invalid entries for stratification
+        individual_results = run_validations(dataset)
+
+        # Filter valid entries from individual results
+        valid_entries = [entry for entry in individual_results if entry.get("is_valid")]
+
+        logging.info(f"Validation task {validation_id} completed successfully.")
+
+        return {
+            "validation_id": validation_id,
+            "validation_results": individual_results,  # All entries with validation statuses
+            "valid_entries": valid_entries,            # Only valid entries for stratification
+        }
+
     except Exception as e:
-        # Log the exception
-        logging.error(f"Error in task {validation_id}: {str(e)}", exc_info=True)
-        
-        # Send error message
-        send_progress(validation_id, f"Validation failed: {str(e)}", msg_type='error')
-        
-        # Optionally, retry the task
-        raise self.retry(exc=e, countdown=60, max_retries=3)
+        logging.error(f"Error in validation task {validation_id}: {str(e)}", exc_info=True)
+        raise
+
+
+
+

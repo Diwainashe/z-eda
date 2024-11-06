@@ -1,8 +1,8 @@
 # api/routing.py
 
-from django.urls import re_path
+from django.urls import path
 from . import consumers
 
 websocket_urlpatterns = [
-    re_path(r'ws/validations/(?P<validation_id>[^/]+)/$', consumers.ValidationConsumer.as_asgi()),
+    path("ws/validations/<str:validation_id>/", consumers.ValidationConsumer.as_asgi()),
 ]
