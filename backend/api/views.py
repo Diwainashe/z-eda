@@ -15,7 +15,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from django.contrib.auth import authenticate
 from django.conf import settings
-from .models import DataUpload, MasterData
+from .models import MasterData
 from .utils import read_file, auto_correct_codes # Import only the needed functions
 from .tasks import run_all_validations_task 
 import uuid
@@ -28,49 +28,49 @@ from rest_framework.response import Response
 logging.basicConfig(level=logging.DEBUG)
 
 # Step 1: Data Upload with Validation Preparation
-class DataUploadView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
+# class DataUploadView(APIView):
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')
-        file_format = request.data.get('file_format')
+#     def post(self, request, *args, **kwargs):
+#         file = request.FILES.get('file')
+#         file_format = request.data.get('file_format')
 
-        if not file or not file_format:
-            return Response({"error": "File and file format are required"}, status=status.HTTP_400_BAD_REQUEST)
+#         if not file or not file_format:
+#             return Response({"error": "File and file format are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            logging.info(f"Saving file for user {request.user.username}")
-            upload = DataUpload.objects.create(
-                user=request.user,
-                file=file,
-                file_format=file_format,
-                step="Step 1: File Uploaded"
-            )
-        except Exception as e:
-            logging.error(f"Error saving file: {str(e)}")
-            return Response({"error": f"Error saving file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#         try:
+#             logging.info(f"Saving file for user {request.user.username}")
+#             upload = DataUpload.objects.create(
+#                 user=request.user,
+#                 file=file,
+#                 file_format=file_format,
+#                 step="Step 1: File Uploaded"
+#             )
+#         except Exception as e:
+#             logging.error(f"Error saving file: {str(e)}")
+#             return Response({"error": f"Error saving file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        file_path = os.path.join(settings.MEDIA_ROOT, str(upload.file))
-        logging.info(f"File saved at path: {file_path}")
+#         file_path = os.path.join(settings.MEDIA_ROOT, str(upload.file))
+#         logging.info(f"File saved at path: {file_path}")
 
-        try:
-            df = read_file(file_path, file_format)
-            logging.info("File read successfully")
-            df['step'] = 'Step 1: File Uploaded'
-            data_preview = df.head(15).to_dict(orient='records')
-            full_data = df.to_dict(orient='records')
+#         try:
+#             df = read_file(file_path, file_format)
+#             logging.info("File read successfully")
+#             df['step'] = 'Step 1: File Uploaded'
+#             data_preview = df.head(15).to_dict(orient='records')
+#             full_data = df.to_dict(orient='records')
 
-            return Response({
-                "data": data_preview,
-                "full_data": full_data,
-                "upload_id": upload.id
-            }, status=status.HTTP_200_OK)
+#             return Response({
+#                 "data": data_preview,
+#                 "full_data": full_data,
+#                 "upload_id": upload.id
+#             }, status=status.HTTP_200_OK)
 
-        except Exception as e:
-            logging.error(f"Data processing error: {str(e)}")
-            return Response({"error": f"Data processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#         except Exception as e:
+#             logging.error(f"Data processing error: {str(e)}")
+#             return Response({"error": f"Data processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Step 4: Auto-Correction
 # API View to handle the auto-correction process

@@ -4,20 +4,20 @@ from django.db import models
 from django.contrib.auth.models import User
 from uuid import uuid4
 
-class DataUpload(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    file = models.FileField(upload_to='uploads/')  # Use Django's FileField to store the file
-    file_format = models.CharField(max_length=10)
-    step = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)    
-    status = models.CharField(max_length=20, default="pending")  # Example field
-    upload_id = models.UUIDField(default=uuid4, editable=False, unique=True)  # Changed: unique=True
+# class DataUpload(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+#     file = models.FileField(upload_to='uploads/')  # Use Django's FileField to store the file
+#     file_format = models.CharField(max_length=10)
+#     step = models.CharField(max_length=100)
+#     created_at = models.DateTimeField(auto_now_add=True)    
+#     status = models.CharField(max_length=20, default="pending")  # Example field
+#     upload_id = models.UUIDField(default=uuid4, editable=False, unique=True)  # Changed: unique=True
     
-    def __str__(self):
-        return f"{self.user.username if self.user else 'Anonymous'} - {self.upload_id}"
+#     def __str__(self):
+#         return f"{self.user.username if self.user else 'Anonymous'} - {self.upload_id}"
 
 class ValidEntries(models.Model):
-    upload = models.ForeignKey(DataUpload, on_delete=models.CASCADE, related_name='valid_entries')
+    upload = models.JSONField()
     data = models.JSONField()  # Store each valid entry as JSON
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)  # Added field
     
@@ -25,7 +25,7 @@ class ValidEntries(models.Model):
         return f"ValidEntry for {self.upload.upload_id}"
 
 class StratifiedData(models.Model):
-    upload = models.ForeignKey(DataUpload, on_delete=models.CASCADE, related_name='stratified_data')
+    upload = models.JSONField()
     age_groups = models.JSONField()
     gender = models.JSONField()
     topography = models.JSONField()
@@ -39,7 +39,7 @@ class StratifiedData(models.Model):
         return f"StratifiedData for {self.upload.upload_id}"
 
 class UploadLog(models.Model):
-    upload = models.ForeignKey(DataUpload, on_delete=models.CASCADE, related_name='logs')
+    upload = models.JSONField()
     step = models.CharField(max_length=50)
     details = models.TextField()  # Log details for the step performed
     created_at = models.DateTimeField(auto_now_add=True,  null=False, blank=False)

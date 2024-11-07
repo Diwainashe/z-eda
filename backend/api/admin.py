@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from .models import (
-    DataUpload,
+    # DataUpload,
     ValidEntries,
     StratifiedData,
     UploadLog,
@@ -42,27 +42,27 @@ class UploadLogInline(admin.TabularInline):
     can_delete = False
     show_change_link = True
 
-@admin.register(DataUpload)
-class DataUploadAdmin(admin.ModelAdmin):
-    list_display = [
-        'upload_id',
-        'user',
-        'file',
-        'file_format',
-        'status',
-        'step',
-        'created_at',
-    ]
-    list_filter = ['status', 'file_format', 'step', 'created_at']
-    search_fields = ['user__username', 'upload_id', 'file_format', 'step']
-    readonly_fields = ['upload_id', 'created_at']
-    ordering = ['-created_at']
-    inlines = [ValidEntriesInline, StratifiedDataInline, UploadLogInline]
+# @admin.register(DataUpload)
+# class DataUploadAdmin(admin.ModelAdmin):
+#     list_display = [
+#         'upload_id',
+#         'user',
+#         'file',
+#         'file_format',
+#         'status',
+#         'step',
+#         'created_at',
+#     ]
+#     list_filter = ['status', 'file_format', 'step', 'created_at']
+#     search_fields = ['user__username', 'upload_id', 'file_format', 'step']
+#     readonly_fields = ['upload_id', 'created_at']
+#     ordering = ['-created_at']
+#     inlines = [ValidEntriesInline, StratifiedDataInline, UploadLogInline]
 
-    # Optional: Customize the display of the user field
-    def user_username(self, obj):
-        return obj.user.username if obj.user else 'Anonymous'
-    user_username.short_description = 'User'
+#     # Optional: Customize the display of the user field
+#     def user_username(self, obj):
+#         return obj.user.username if obj.user else 'Anonymous'
+#     user_username.short_description = 'User'
 
 @admin.register(ValidEntries)
 class ValidEntriesAdmin(admin.ModelAdmin):
