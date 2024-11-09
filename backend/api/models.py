@@ -3,6 +3,19 @@
 from django.db import models
 from django.contrib.auth.models import User
 from uuid import uuid4
+from django.db.models import Count, F, ExpressionWrapper, fields
+import logging
+import time
+import pyotp
+from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.http import JsonResponse
+from django.contrib.auth.models import AbstractUser
+
+
+logger = logging.getLogger(__name__)
 
 # class DataUpload(models.Model):
 #     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -25,7 +38,7 @@ class ValidEntries(models.Model):
         return f"ValidEntry for {self.upload.upload_id}"
 
 class StratifiedData(models.Model):
-    upload = models.JSONField()
+    upload_id = models.UUIDField(unique=True, editable=False, blank=False, null=False, default=uuid4)
     age_groups = models.JSONField()
     gender = models.JSONField()
     topography = models.JSONField()
@@ -33,16 +46,18 @@ class StratifiedData(models.Model):
     behavior = models.JSONField()
     grade = models.JSONField()
     basis_of_diagnosis = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # Added field
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     
     def __str__(self):
-        return f"StratifiedData for {self.upload.upload_id}"
+        return f"StratifiedData for {self.upload_id}"
+    
+        
 
 class UploadLog(models.Model):
     upload = models.JSONField()
     step = models.CharField(max_length=50)
     details = models.TextField()  # Log details for the step performed
-    created_at = models.DateTimeField(auto_now_add=True,  null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True,  null=False, blank=False)  # Added field  # Added field
     
     def __str__(self):
         return f"Log: {self.step} for {self.upload.upload_id}"
@@ -66,3 +81,53 @@ class MasterData(models.Model):
     
     def __str__(self):
         return f"MasterData {self.upload_id} by {self.user.username}"
+
+class Registry(AbstractUser):
+    ROLE_CHOICES = [
+        ('user', 'User'),
+        ('admin', 'Admin'),
+    ]
+    
+    username = models.CharField(max_length=150, unique=True)
+    password = models.CharField(max_length=128)  # Store hashed passwords
+    email = models.EmailField(unique=True)
+    is_valid = models.BooleanField(default=False)  # Approval status
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    
+    # Override groups and user_permissions to avoid conflicts
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='registry_user_groups',  # Unique related_name to avoid conflict
+        blank=True,
+        help_text="The groups this user belongs to."
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='registry_user_permissions',  # Unique related_name to avoid conflict
+        blank=True,
+        help_text="Specific permissions for this user."
+    )
+    
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+    
+class LogEntry(models.Model):
+    ACTION_CHOICES = [
+        ('register', 'Registration'),
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('upload', 'Data Upload'),
+        ('validation', 'Data Validation'),
+        ('autocorrect', 'Auto-correction'),
+        ('deactivation', 'Account Deactivation'),
+        ('role_change', 'Role Change'),
+        ('report_generation', 'Report Generation'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='api_log_entries')
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.JSONField(blank=True, null=True)  # Additional data as needed
+
+    def __str__(self):
+        return f"{self.user.username if self.user else 'System'} - {self.action}"

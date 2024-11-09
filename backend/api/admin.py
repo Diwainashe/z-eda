@@ -9,6 +9,11 @@ from .models import (
     MasterData,
 )
 
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.contrib.auth.models import User
+from .models import LogEntry
+import csv
+from django.http import HttpResponse
 # Inline Admin for ValidEntries
 class ValidEntriesInline(admin.TabularInline):
     model = ValidEntries
@@ -78,20 +83,28 @@ class ValidEntriesAdmin(admin.ModelAdmin):
 
 @admin.register(StratifiedData)
 class StratifiedDataAdmin(admin.ModelAdmin):
-    list_display = ['id', 'upload', 'age_groups', 'gender', 'topography', 'histology', 'behavior', 'grade', 'basis_of_diagnosis', 'created_at']
-    list_filter = ['upload', 'age_groups', 'gender', 'created_at']
-    search_fields = ['upload__upload_id']
-    readonly_fields = [
-        'upload',
-        'age_groups',
-        'gender',
-        'topography',
-        'histology',
-        'behavior',
-        'grade',
-        'basis_of_diagnosis',
-        'created_at',
+    list_display = [
+        'id', 
+        'age_groups', 
+        'gender', 
+        'topography', 
+        'histology', 
+        'behavior', 
+        'grade', 
+        'basis_of_diagnosis', 
+        'created_at'
     ]
+    readonly_fields = [
+        'age_groups', 
+        'gender', 
+        'topography', 
+        'histology', 
+        'behavior', 
+        'grade', 
+        'basis_of_diagnosis', 
+        'created_at'
+    ]
+    can_delete = False
     ordering = ['-created_at']
 
 @admin.register(UploadLog)
@@ -138,3 +151,49 @@ class MasterDataAdmin(admin.ModelAdmin):
     def user_username(self, obj):
         return obj.user.username if obj.user else 'Anonymous'
     user_username.short_description = 'User'
+
+# Extend default User admin for custom management
+class UserAdmin(DefaultUserAdmin):
+    actions = ['activate_users', 'deactivate_users', 'change_user_role']
+
+    def activate_users(self, request, queryset):
+        queryset.update(is_active=True)
+
+    def deactivate_users(self, request, queryset):
+        queryset.update(is_active=False)
+
+    def change_user_role(self, request, queryset):
+        queryset.update(is_staff=True)  # Example for setting as staff
+        # Alternatively, provide a custom interface for setting roles
+
+    activate_users.short_description = "Activate selected users"
+    deactivate_users.short_description = "Deactivate selected users"
+    change_user_role.short_description = "Grant selected users staff role"
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
+
+# Register LogEntry for review and report generation
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):
+    list_display = ('user', 'action', 'timestamp', 'details')
+    list_filter = ('action', 'timestamp')
+    search_fields = ('user__username', 'details')
+    
+@admin.action(description="Export selected logs as CSV")
+def export_logs_as_csv(modeladmin, request, queryset):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="logs.csv"'
+    writer = csv.writer(response)
+    
+    # Write headers
+    writer.writerow(['User', 'Action', 'Timestamp', 'Details'])
+    
+    # Write data rows
+    for log in queryset:
+        writer.writerow([log.user.username if log.user else "System", log.action, log.timestamp, log.details])
+    
+    return response
+
+class LogEntryAdmin(admin.ModelAdmin):
+    actions = [export_logs_as_csv]

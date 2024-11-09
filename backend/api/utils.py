@@ -7,24 +7,29 @@ from rapidfuzz import process
 from datetime import datetime
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+import chardet
+import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
+logger = logging.getLogger(__name__)
 
 # Utility function to read the uploaded file based on its format
 def read_file(file_path, file_format):
-    import chardet
-    import numpy as np
-
     try:
         logging.info(f"Starting to read file: {file_path} with format: {file_format}")
-        
+
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        # Detect encoding for CSV files
         def detect_encoding(file_path):
             with open(file_path, 'rb') as file:
                 result = chardet.detect(file.read(10000))
                 return result['encoding']
 
+        # Read file based on format
         if file_format == 'csv':
             encoding = detect_encoding(file_path)
             logging.info(f"Detected encoding: {encoding}")
@@ -36,28 +41,35 @@ def read_file(file_path, file_format):
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
 
-        logging.info(f"Successfully read file: {file_path}")
+        logging.info(f"Successfully read file: {file_path} with shape {df.shape}")
         return df.replace({np.nan: None})
 
     except Exception as e:
         logging.error(f"Error reading file '{file_path}': {str(e)}", exc_info=True)
         raise
-
-
+    
 def preprocess_and_load_json(file_path):
     try:
         abs_file_path = os.path.join(settings.BASE_DIR, file_path)
+        
+        if not os.path.exists(abs_file_path):
+            raise FileNotFoundError(f"JSON file not found: {abs_file_path}")
+
         logging.info(f"Loading JSON file from: {abs_file_path}")
         with open(abs_file_path, 'r', encoding='utf-8-sig') as f:
             content = json.load(f)
+
+        # Reverse key-value pairs if the filename includes 'morphology'
         if 'morphology' in file_path:
-            return {value: key for key, value in content.items()}
-        
-        # Log a preview of the first four items if available
-        preview = list(content.items())[:4]  # Get up to the first 4 items
-        logging.info(f"Preview of codes (up to 4): {preview}")
+            content = {value: key for key, value in content.items()}
+
+        # Log a preview of the first four items if the content is not empty
+        if content:
+            preview = list(content.items())[:4]
+            logging.info(f"Preview of codes (up to 4): {preview}")
+
         return content
-    
+
     except Exception as e:
         logging.error(f"Error loading JSON file '{file_path}': {str(e)}", exc_info=True)
         return {}
@@ -66,39 +78,64 @@ def preprocess_and_load_json(file_path):
 def find_closest_match(input_string, choices, threshold=0.85):
     """
     Finds the closest match to an input string from a list of choices using fuzzy matching.
-    Returns the closest match and its similarity score.
+    Returns the closest match and its similarity score (as a percentage).
     """
+    # Validate input types
+    if not isinstance(input_string, str) or not isinstance(choices, list):
+        logging.warning("Invalid input types: 'input_string' should be str and 'choices' should be list.")
+        return None, 0
+    
     if not input_string or not choices:  # Handle null or empty input
         return None, 0
 
     try:
         # Perform fuzzy matching
         closest_match, score, _ = process.extractOne(input_string, choices)
-
-        # Convert score to a percentage for consistency
+        
+        # Convert score to a percentage
         score_percentage = score / 100.0
+        logging.info(f"Matching '{input_string}' -> Closest match: '{closest_match}' with score: {score_percentage:.2f}")
 
         if score_percentage >= threshold:
-            return closest_match, score
+            return closest_match, score_percentage
         else:
             return None, 0
     except Exception as e:
         logging.error(f"Error finding closest match for '{input_string}': {str(e)}", exc_info=True)
         return None, 0
 
-
 def auto_correct_sex(value, sex_codes):
+    """
+    Normalizes sex input to standard codes based on a provided dictionary.
+    
+    Args:
+        value (str): The sex/gender input to normalize.
+        sex_codes (dict): Dictionary mapping 'male' and 'female' to standard codes.
+    
+    Returns:
+        str: The normalized sex code.
+    """
     try:
         value = value.strip().lower()
-        if value in ["male", "m"]:
-            return sex_codes.get("male", value)
-        elif value in ["female", "f"]:
-            return sex_codes.get("female", value)
-        return value
+        logging.info(f"Auto-correcting sex input: '{value}'")
+
+        # Check common variations for male
+        if value in ["male", "m", "1"]:
+            normalized_value = sex_codes.get("male", value)
+            logging.info(f"Normalized '{value}' to '{normalized_value}' (male)")
+            return normalized_value
+
+        # Check common variations for female
+        elif value in ["female", "f", "0"]:
+            normalized_value = sex_codes.get("female", value)
+            logging.info(f"Normalized '{value}' to '{normalized_value}' (female)")
+            return normalized_value
+
+        logging.info(f"No match found for '{value}', returning original.")
+        return value  # Return the original if no match is found
     except Exception as e:
         logging.error(f"Error auto-correcting sex value '{value}': {str(e)}", exc_info=True)
         return value
-
 
 def auto_correct_codes(dataset, threshold=0.7):
     """
@@ -212,7 +249,7 @@ def auto_correct_codes(dataset, threshold=0.7):
     except Exception as e:
         logging.error(f"Error in auto_correct_codes: {str(e)}", exc_info=True)
         raise
-
+        return value, None
 
 def log_corrections(corrections):
     try:

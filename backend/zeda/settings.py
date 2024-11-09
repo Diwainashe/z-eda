@@ -50,7 +50,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'channels',
-    'api.apps.ApiConfig'
+    'api.apps.ApiConfig',
+    'rest_framework_simplejwt'
 ]
 
 MIDDLEWARE = [
@@ -192,7 +193,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'api.authentication.CookieTokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         # Add other authentication classes if needed
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -205,13 +206,19 @@ REST_FRAMEWORK = {
     ],
 }
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
+
 CORS_ALLOW_CREDENTIALS = True
 
 from corsheaders.defaults import default_headers
 
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    'X-CSRFToken',
-    # Add any other custom headers here
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 LOGGING = {
@@ -233,3 +240,13 @@ LOGGING = {
         },
     },
 }
+
+DEFAULT_FROM_EMAIL = "mutasa.christian@gmail.com"
+ADMIN_EMAIL = "mutasa.christian@gmail.com"  # Replace with the admin's email address
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"  # Replace with your email provider's SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "mutasa.christian@gmail.com" # Replace with your email provider's
+EMAIL_HOST_PASSWORD = "qzji mhrv whbr vxfn"

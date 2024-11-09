@@ -6,6 +6,7 @@ from .utils import run_validations, send_progress, run_data_combination_edits, r
 # Import your actual auto-correction logic/module
 # from .auto_correction_module import perform_auto_correction
 import time  # For simulating long-running tasks
+logger = logging.getLogger(__name__)
 
 @shared_task
 def auto_correct_codes(upload_id, dataset):

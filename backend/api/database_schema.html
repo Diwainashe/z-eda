@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Database Schema</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+			}
+			h1 {
+				color: #333;
+			}
+			.model-container {
+				margin-bottom: 20px;
+			}
+			.model-name {
+				font-size: 1.5em;
+				color: #1cabe2;
+			}
+			.field-table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 10px;
+			}
+			.field-table th,
+			.field-table td {
+				border: 1px solid #ddd;
+				padding: 8px;
+				text-align: left;
+			}
+			.field-table th {
+				background-color: #f2f2f2;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Database Schema</h1>
+		{% for model in schema_info %}
+		<div class="model-container">
+			<div class="model-name">{{ model.app_label }}.{{ model.model_name }}</div>
+			<table class="field-table">
+				<thead>
+					<tr>
+						<th>Field Name</th>
+						<th>Field Type</th>
+						<th>Nullable</th>
+						<th>Related Model</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for field in model.fields %}
+					<tr>
+						<td>{{ field.name }}</td>
+						<td>{{ field.type }}</td>
+						<td>{{ field.nullable }}</td>
+						<td>{{ field.related_model }}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		{% endfor %}
+	</body>
+</html>
