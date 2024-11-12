@@ -1,0 +1,56 @@
+.header-appbar {
+  background-color: #fff;
+  color: #000;
+  box-shadow: none;
+}
+
+.header-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-logos {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo-link {
+  margin-right: 60px; /* Space between logos */
+}
+
+.header-logo {
+  width: 120px; /* Adjust the size of the logos */
+}
+
+.header-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.header-button {
+  color: #333;
+  border-color: #333;
+  margin-right: 20px;
+}
+
+.header-button-donate {
+  background-color: #000;
+  color: #fff;
+}
+
+.header-burger {
+  margin-left: 20px;
+  display: none;
+}
+
+/* Show burger icon on smaller screens */
+@media (max-width: 768px) {
+  .header-buttons {
+    display: none;
+  }
+
+  .header-burger {
+    display: block;
+  }
+}

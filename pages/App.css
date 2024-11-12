@@ -1,0 +1,81 @@
+/* General styling for the app */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+/* Basic reset for margins, paddings, and box-sizing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Root element styling */
+#root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header styling */
+header {
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-size: 1.5em;
+}
+
+/* Navbar styling */
+nav {
+    background-color: #444;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-around;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    padding: 10px;
+}
+
+nav a:hover {
+    background-color: #555;
+}
+
+/* Main content area */
+main {
+    flex: 1;
+    padding: 20px;
+    background-color: white;
+}
+
+/* Footer styling */
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Image container for logos */
+.image-container {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px 0;
+    background-color: #ffffff;
+}
+
+.image-container img {
+    max-width: 100%;
+    height: auto;
+    margin: 0 10px;
+}
