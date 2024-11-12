@@ -3,15 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from uuid import uuid4
-from django.db.models import Count, F, ExpressionWrapper, fields
 import logging
-import time
-import pyotp
-from django.contrib.auth.hashers import make_password
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth.hashers import make_password
-from django.http import JsonResponse
 from django.contrib.auth.models import AbstractUser
 
 

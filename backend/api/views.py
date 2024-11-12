@@ -30,6 +30,7 @@ from django.apps import apps
 from .models import LogEntry
 from django.utils.dateparse import parse_date
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import BasePermission
 
 # Initialize logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -46,6 +47,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 # This view handles refreshing the token when it expires.
 class CustomTokenRefreshView(TokenRefreshView):
     pass
+
+class IsSuperUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_superuser
 
 class LoginView(APIView):
     def post(self, request):
@@ -217,7 +222,12 @@ class CheckAuthView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({'authenticated': True, 'username': request.user.username})
+        # Return authentication status and additional user details
+        return Response({
+            'authenticated': True,
+            'username': request.user.username,
+            'is_staff': request.user.is_staff  # Check if the user has staff privileges
+        })
 
     
 
@@ -535,23 +545,22 @@ def logout_view(request):
 
 	return JsonResponse({"message": "Logged out successfully"}, status=200)
 
+
 @api_view(['GET', 'POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsAuthenticated])
+@parser_classes([JSONParser])
 def admin_user_management(request):
     if request.method == 'GET':
-        # Return list of all users with their privileges and status
         users = User.objects.all().values(
             'id', 'username', 'email', 'is_active', 'is_staff', 'is_superuser'
         )
         return Response(users, status=status.HTTP_200_OK)
-
     elif request.method == 'POST':
-        # Update user privileges and status
         user_id = request.data.get('user_id')
         is_active = request.data.get('is_active')
         is_staff = request.data.get('is_staff')
         is_superuser = request.data.get('is_superuser')
-
+        
         try:
             user = User.objects.get(id=user_id)
             user.is_active = is_active
@@ -560,7 +569,7 @@ def admin_user_management(request):
             user.save()
             return Response({"message": "User privileges updated successfully"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
                 
 class ForgotPasswordView(APIView):
     def post(self, request):
@@ -568,7 +577,7 @@ class ForgotPasswordView(APIView):
         try:
             user = User.objects.get(email=email)
             # Generate a password reset token/link here (use Django's built-in reset if preferred)
-            reset_link = f"http://yourfrontend.com/reset-password/{user.pk}/token"
+            reset_link = f"http://localhost:8000/reset-password/{user.pk}/token"
             send_mail(
                 subject="Password Reset Request",
                 message=f"Click the link to reset your password: {reset_link}",

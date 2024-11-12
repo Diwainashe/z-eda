@@ -18,7 +18,7 @@ urlpatterns = [
     path('approve-reset/<int:user_id>/', approve_password_reset, name='approve_password_reset'),
     path('database-schema/', database_schema_view, name='database_schema'),
     path("stratified-data/", stratify_data_view, name="stratified_data"),
-    path('admin/manage-users/', admin_user_management, name='admin_user_management'),
+    path('api/manage-users/', admin_user_management, name='admin_user_management'),
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 ]

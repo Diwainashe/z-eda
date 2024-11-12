@@ -51,7 +51,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',
     'api.apps.ApiConfig',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    'django_extensions'
+
 ]
 
 MIDDLEWARE = [
@@ -236,10 +238,16 @@ LOGGING = {
         },
         'django': {
             'handlers': ['console'],
+            'level': 'INFO',  # Set to DEBUG for more detailed logging
+        },
+        'django.server': {
+            'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
         },
     },
 }
+
 
 DEFAULT_FROM_EMAIL = "mutasa.christian@gmail.com"
 ADMIN_EMAIL = "mutasa.christian@gmail.com"  # Replace with the admin's email address
