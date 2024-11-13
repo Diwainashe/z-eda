@@ -26,7 +26,7 @@ const Home = () => {
 		pageContainer: {
 			padding: "40px",
 			backgroundColor: "#f5f5f5",
-			minHeight: "100vh",
+			minHeight: "40vh",
 		},
 		title: {
 			marginBottom: "20px",
@@ -56,8 +56,11 @@ const Home = () => {
 
 	return (
 		<Container style={styles.pageContainer}>
-			<Typography variant="h3" style={styles.title}>
-				Welcome to the Dashboard
+			<Typography
+				variant="h3"
+				style={{ textAlign: "center", color: "#1CABE2" }}
+			>
+				ZNCR - Exploratory Data Analytics Dashboard
 			</Typography>
 			<Grid container spacing={4} style={styles.gridContainer}>
 				{pages.map((page, index) => (
