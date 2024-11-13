@@ -333,6 +333,18 @@ def approve_user(request, user_id):
 
         return JsonResponse({'message': f"User {user.username} has been approved."}, status=200)
 
+import json
+import logging
+from django.conf import settings
+from django.core.mail import send_mail
+from django.contrib.auth.hashers import make_password
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def forgot_password(request):
     if request.method == 'POST':
@@ -340,17 +352,19 @@ def forgot_password(request):
             # Parse JSON data from the request body
             data = json.loads(request.body)
             username = data.get('username')
+            new_password = data.get('new_password')
             logger.info(f"Password reset requested for username: {username}")
         except json.JSONDecodeError:
             logger.error("Invalid JSON data received in password reset request.")
             return JsonResponse({'error': 'Invalid JSON data.'}, status=400)
 
-        # Find user and invalidate temporarily
+        # Find user, update password, and deactivate temporarily
         try:
-            user = Registry.objects.get(username=username)
-            user.is_valid = False  # Temporarily invalidate user
+            user = User.objects.get(username=username)
+            user.password = make_password(new_password)  # Set the new password
+            user.is_active = False  # Deactivate user until admin approves
             user.save()
-            logger.info(f"User '{username}' temporarily deactivated for password reset.")
+            logger.info(f"User '{username}' password updated and temporarily deactivated.")
 
             # Notify admin for approval
             send_mail(
@@ -362,28 +376,30 @@ def forgot_password(request):
             logger.info(f"Password reset request email sent to admin for user '{username}'.")
 
             return JsonResponse({'message': 'Password reset request sent to admin.'}, status=200)
-        except Registry.DoesNotExist:
+        except User.DoesNotExist:
             logger.warning(f"Password reset requested for non-existent user: {username}")
             return JsonResponse({'error': 'User not found'}, status=404)
+
+    # Handle non-POST requests by returning an error message
+    return JsonResponse({'error': 'Only POST requests are allowed on this endpoint.'}, status=405)
+
 
 @csrf_exempt
 def approve_password_reset(request, user_id):
     try:
         # Retrieve user for password reset approval
-        user = get_object_or_404(Registry, id=user_id)
+        user = get_object_or_404(User, id=user_id)
         logger.info(f"Admin approving password reset for user '{user.username}' (ID: {user_id}).")
 
-        # Set new password and re-validate user
-        new_password = "new_password_here"  # Replace with secure password generation logic
-        user.password = make_password(new_password)
-        user.is_valid = True  # Re-validate user
+        # Re-activate user
+        user.is_active = True  # Reactivate the user
         user.save()
-        logger.info(f"Password reset for user '{user.username}' approved, user re-validated.")
+        logger.info(f"User '{user.username}' re-activated.")
 
-        # Notify user of the new password
+        # Notify user of successful reset and re-activation
         send_mail(
             subject="Password Reset Approved",
-            message=f"Your password reset has been approved. Your new password is: {new_password}",
+            message="Your password reset has been approved. You can now log in with your new password.",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
@@ -393,6 +409,7 @@ def approve_password_reset(request, user_id):
     except Exception as e:
         logger.error(f"Failed to approve password reset for user ID {user_id}: {e}")
         return JsonResponse({'error': 'Failed to approve password reset.'}, status=500)
+
 
 @csrf_exempt
 def register_user(request):
